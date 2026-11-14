@@ -1,0 +1,220 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny for any unspecified collection
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Boot-time Firestore connectivity check document
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Helper Functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'karkiamir15@gmail.com' && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'platform_admin')
+      );
+    }
+
+    function isValidRole(role) {
+      return role in ['customer', 'organization_owner', 'branch_manager', 'receptionist', 'service_staff', 'platform_admin'];
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if !isSignedIn() || isAdmin() || request.auth.uid == userId;
+      allow create: if isValidId(userId) &&
+        incoming().fullName is string && incoming().fullName.size() > 0 && incoming().fullName.size() <= 100 &&
+        incoming().email is string && incoming().email.size() <= 120 &&
+        (!('role' in incoming()) || isValidRole(incoming().role)) &&
+        (!('accountStatus' in incoming()) || incoming().accountStatus in ['active', 'suspended']) &&
+        (!isSignedIn() || isAdmin() || (request.auth.uid == userId && incoming().role == 'customer'));
+      allow update: if isValidId(userId) &&
+        incoming().fullName is string && incoming().fullName.size() > 0 && incoming().fullName.size() <= 100 &&
+        incoming().email is string && incoming().email.size() <= 120 &&
+        (!isSignedIn() || isAdmin() || (
+          request.auth.uid == userId &&
+          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'accountStatus', 'organizationId', 'branchId', 'uid', 'email'])
+        ));
+      allow delete: if isAdmin();
+    }
+
+    // 2. Organizations Collection
+    match /organizations/{orgId} {
+      allow read: if true;
+      allow create: if isValidId(orgId) &&
+        incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 150 &&
+        incoming().industryId is string && incoming().industryId.size() > 0 && incoming().industryId.size() <= 50 &&
+        (!('status' in incoming()) || incoming().status in ['pending_verification', 'approved', 'rejected', 'suspended']);
+      allow update: if isValidId(orgId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'tagline', 'phone', 'email', 'address', 'city', 'province',
+          'website', 'description', 'status', 'verificationRemarks', 'verifiedAt',
+          'verifiedBy', 'operationalSettings', 'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 3. Branches Collection
+    match /branches/{branchId} {
+      allow read: if true;
+      allow create: if isValidId(branchId) &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 150 &&
+        incoming().address is string && incoming().address.size() <= 250;
+      allow update: if isValidId(branchId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'address', 'phone', 'operatingHours', 'timezone', 'isOpen', 'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 4. Services Collection
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create: if isValidId(serviceId) &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 150 &&
+        incoming().code is string && incoming().code.size() >= 1 && incoming().code.size() <= 20;
+      allow update: if isValidId(serviceId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'code', 'category', 'estimatedDurationMinutes', 'feeAmount',
+          'isPaid', 'requiredDocuments', 'description', 'isActive', 'maxSlotCapacity', 'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 5. Counters Collection
+    match /counters/{counterId} {
+      allow read: if true;
+      allow create: if isValidId(counterId) &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().branchId is string && incoming().branchId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 120;
+      allow update: if isValidId(counterId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'number', 'serviceIds', 'status', 'currentServingTokenId', 'updatedAt'
+        ])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 6. Staff Collection
+    match /staff/{staffId} {
+      allow read: if true;
+      allow create: if isValidId(staffId) &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().name is string && incoming().name.size() >= 2 && incoming().name.size() <= 100 &&
+        incoming().email is string && incoming().email.size() <= 120 &&
+        isValidRole(incoming().role);
+      allow update: if isValidId(staffId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'branchId', 'counter', 'status', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 7. Queues Collection (Daily Queue Sequence Tracker)
+    match /queues/{queueId} {
+      allow read: if true;
+      allow create: if isValidId(queueId) &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().serviceId is string && incoming().serviceId.size() <= 128 &&
+        incoming().status in ['open', 'paused', 'closed'] &&
+        incoming().lastSequence is int && incoming().lastSequence >= 0;
+      allow update: if isValidId(queueId) &&
+        incoming().status in ['open', 'paused', 'closed'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['lastSequence', 'waitingCount', 'status', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
+
+    // 8. Queue Tokens Collection
+    match /queueTokens/{tokenId} {
+      allow read: if true;
+      allow create: if isValidId(tokenId) &&
+        incoming().tokenNumber is string && incoming().tokenNumber.size() > 0 && incoming().tokenNumber.size() <= 20 &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().branchId is string && incoming().branchId.size() <= 128 &&
+        incoming().serviceId is string && incoming().serviceId.size() <= 128 &&
+        incoming().status == 'waiting';
+      allow update: if isValidId(tokenId) &&
+        incoming().status in ['waiting', 'called', 'serving', 'completed', 'skipped', 'cancelled'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'counterId', 'counterName', 'staffUid',
+          'calledAt', 'servingAt', 'completedAt', 'peopleAhead', 'updatedAt'
+        ]);
+      allow delete: if isAdmin();
+    }
+
+    // 9. Appointments Collection
+    match /appointments/{appointmentId} {
+      allow read: if true;
+      allow create: if isValidId(appointmentId) &&
+        incoming().appointmentDate is string && incoming().appointmentDate.size() == 10 &&
+        incoming().timeSlot is string && incoming().timeSlot.size() <= 60 &&
+        incoming().organizationId is string && incoming().organizationId.size() <= 128 &&
+        incoming().serviceId is string && incoming().serviceId.size() <= 128 &&
+        incoming().status == 'confirmed';
+      allow update: if isValidId(appointmentId) &&
+        incoming().status in ['pending', 'confirmed', 'arrived', 'rescheduled', 'completed', 'cancelled', 'rejected'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'status', 'notes', 'appointmentDate', 'timeSlot', 'startTime', 'endTime', 'updatedAt'
+        ]);
+      allow delete: if isAdmin();
+    }
+
+    // 10. Notifications Collection
+    match /notifications/{notificationId} {
+      allow read: if !isSignedIn() || isAdmin() || resource.data.recipientUserId == request.auth.uid;
+      allow create: if isValidId(notificationId) &&
+        incoming().type is string && incoming().type.size() <= 60 &&
+        incoming().title is string && incoming().title.size() <= 160 &&
+        incoming().message is string && incoming().message.size() <= 1000 &&
+        incoming().read is bool;
+      allow update: if isValidId(notificationId) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt']) &&
+        incoming().read is bool &&
+        (!('readAt' in incoming()) || incoming().readAt is string);
+      allow delete: if isAdmin();
+    }
+
+    // 11. Audit Logs Collection (Strict Append-Only Immutable Audit Trail)
+    match /auditLogs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId) &&
+        incoming().action is string && incoming().action.size() > 0 && incoming().action.size() <= 100 &&
+        incoming().entityType is string && incoming().entityType.size() > 0 && incoming().entityType.size() <= 60 &&
+        incoming().timestamp is string && incoming().timestamp.size() <= 50;
+      allow update, delete: if false;
+    }
+  }
+}

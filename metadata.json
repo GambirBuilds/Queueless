@@ -1,0 +1,6 @@
+{
+  "name": "QUEUELESS - Digital Queue & Appointment Management Platform",
+  "description": "Multi-industry digital queue and appointment management platform connecting customers and organizations across healthcare, banking, government, retail, automotive, and education with bilingual English/Nepali support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,321 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User identity and role-based access information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 25 },
+        "role": {
+          "type": "string",
+          "enum": ["customer", "organization_owner", "branch_manager", "receptionist", "service_staff", "platform_admin"]
+        },
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "accountStatus": {
+          "type": "string",
+          "enum": ["active", "suspended", "pending"]
+        },
+        "preferredLanguage": { "type": "string", "enum": ["en", "ne"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "fullName", "email", "role"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "Institutional entity providing queued services",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "industryId": { "type": "string", "maxLength": 50 },
+        "industryName": { "type": "string", "maxLength": 80 },
+        "registrationNumber": { "type": "string", "maxLength": 80 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "address": { "type": "string", "maxLength": 200 },
+        "city": { "type": "string", "maxLength": 80 },
+        "province": { "type": "string", "maxLength": 80 },
+        "website": { "type": "string", "maxLength": 150 },
+        "tagline": { "type": "string", "maxLength": 200 },
+        "timezone": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 1500 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "ownerName": { "type": "string", "maxLength": 100 },
+        "ownerEmail": { "type": "string", "maxLength": 100 },
+        "ownerPhone": { "type": "string", "maxLength": 30 },
+        "status": {
+          "type": "string",
+          "enum": ["pending_verification", "approved", "rejected", "suspended"]
+        },
+        "isDemo": { "type": "boolean" },
+        "verificationRemarks": { "type": "string", "maxLength": 500 },
+        "verifiedAt": { "type": "string" },
+        "verifiedBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "industryId", "email", "ownerUid", "status"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Physical facility branch operated by an organization",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "address": { "type": "string", "maxLength": 250 },
+        "city": { "type": "string", "maxLength": 80 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "operatingHours": { "type": "string", "maxLength": 120 },
+        "timezone": { "type": "string", "maxLength": 60 },
+        "isOpen": { "type": "boolean" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "name", "address", "isOpen"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Specific queueable service offering",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "code": { "type": "string", "maxLength": 20 },
+        "category": { "type": "string", "maxLength": 80 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "estimatedDurationMinutes": { "type": "number" },
+        "isPaid": { "type": "boolean" },
+        "feeAmount": { "type": "number" },
+        "feeCurrency": { "type": "string", "maxLength": 10 },
+        "maxSlotCapacity": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "name", "code", "isActive"]
+    },
+    "Counter": {
+      "title": "Counter",
+      "description": "Physical desk or window serving citizen tokens",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "number": { "type": "string", "maxLength": 30 },
+        "name": { "type": "string", "maxLength": 120 },
+        "assignedStaffUid": { "type": "string", "maxLength": 128 },
+        "currentServingTokenId": { "type": "string", "maxLength": 128 },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "On Break", "open", "closed", "break"]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "branchId", "number", "name", "status"]
+    },
+    "Staff": {
+      "title": "Staff",
+      "description": "Institutional staff member assignment and role",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 120 },
+        "role": {
+          "type": "string",
+          "enum": ["organization_owner", "branch_manager", "receptionist", "service_staff"]
+        },
+        "counter": { "type": "string", "maxLength": 120 },
+        "assignedCounterId": { "type": "string", "maxLength": 128 },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Inactive", "active", "inactive"]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "branchId", "name", "email", "role", "status"]
+    },
+    "Queue": {
+      "title": "Queue",
+      "description": "Daily queue container and sequential counter",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "serviceId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "prefix": { "type": "string", "maxLength": 10 },
+        "lastSequence": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": ["open", "paused", "closed"]
+        },
+        "waitingCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "branchId", "serviceId", "date", "status"]
+    },
+    "QueueToken": {
+      "title": "QueueToken",
+      "description": "Atomic digital queue ticket assigned to a customer",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "serviceId": { "type": "string", "maxLength": 128 },
+        "queueId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 20 },
+        "tokenNumber": { "type": "string", "maxLength": 20 },
+        "sequenceNumber": { "type": "number" },
+        "customerUid": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "priority": {
+          "type": "string",
+          "enum": ["Normal", "Senior Citizen", "Urgent"]
+        },
+        "isWalkIn": { "type": "boolean" },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "called", "serving", "completed", "skipped", "cancelled"]
+        },
+        "counterId": { "type": "string", "maxLength": 128 },
+        "counterName": { "type": "string", "maxLength": 100 },
+        "staffUid": { "type": "string", "maxLength": 128 },
+        "peopleAhead": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "issuedAt": { "type": "string" },
+        "calledAt": { "type": "string" },
+        "servingAt": { "type": "string" },
+        "completedAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["organizationId", "branchId", "serviceId", "tokenNumber", "status"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Pre-booked service appointment reservation",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string", "maxLength": 128 },
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 128 },
+        "serviceId": { "type": "string", "maxLength": 128 },
+        "appointmentDate": { "type": "string", "maxLength": 20 },
+        "timeSlot": { "type": "string", "maxLength": 50 },
+        "startTime": { "type": "string", "maxLength": 20 },
+        "endTime": { "type": "string", "maxLength": 20 },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "rescheduled", "rejected", "cancelled", "arrived", "completed", "no_show"]
+        },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerEmail": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "referenceCode": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["customerId", "organizationId", "branchId", "serviceId", "appointmentDate", "timeSlot", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User in-app alert record",
+      "type": "object",
+      "properties": {
+        "recipientUserId": { "type": "string", "maxLength": 128 },
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "type": {
+          "type": "string",
+          "enum": ["TOKEN_ISSUED", "TOKEN_CALLED", "TOKEN_APPROACHING", "APPOINTMENT_CONFIRMED", "APPOINTMENT_CANCELLED", "ORG_STATUS"]
+        },
+        "title": { "type": "string", "maxLength": 160 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "channel": { "type": "string", "maxLength": 40 },
+        "read": { "type": "boolean" },
+        "readAt": { "type": "string" },
+        "relatedId": { "type": "string", "maxLength": 128 },
+        "relatedTokenId": { "type": "string", "maxLength": 128 },
+        "relatedAppointmentId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["recipientUserId", "type", "title", "message", "read"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable security and state audit record",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "maxLength": 128 },
+        "actorUid": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 100 },
+        "action": { "type": "string", "maxLength": 80 },
+        "entityType": { "type": "string", "maxLength": 50 },
+        "entityId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["actorUid", "action", "entityType", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and RBAC system roles"
+    },
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Institutional registered organizations"
+    },
+    "/branches/{branchId}": {
+      "schema": "Branch",
+      "description": "Facility branch locations"
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Offered queue and appointment services"
+    },
+    "/counters/{counterId}": {
+      "schema": "Counter",
+      "description": "Service counters and operator desks"
+    },
+    "/staff/{staffId}": {
+      "schema": "Staff",
+      "description": "Organization staff member assignments"
+    },
+    "/queues/{queueId}": {
+      "schema": "Queue",
+      "description": "Daily queue metadata and sequences"
+    },
+    "/queueTokens/{tokenId}": {
+      "schema": "QueueToken",
+      "description": "Issued digital queue tickets and live state"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Customer appointment reservations"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications and alerts"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Immutable security and transition audit trails"
+    }
+  }
+}
